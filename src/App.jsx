@@ -31,10 +31,11 @@ export default function App() {
   const recognitionRef = useRef(null);
   const globeRef = useRef(null);
 
-  // Check speech recognition support
+  // Check speech recognition support and mobile device
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    setSpeechSupported(!!SR);
+    const isMobile = /iPhone|iPad|Android|Mobile/.test(navigator.userAgent);
+    setSpeechSupported(!!SR && !isMobile);
   }, []);
 
   const pickRandomCountry = useCallback(() => {
