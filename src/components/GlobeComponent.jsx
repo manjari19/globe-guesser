@@ -116,7 +116,10 @@ export default function GlobeComponent({ isSpinning, targetCountry, onLanded, li
     const latSpan = maxLat - minLat;
     const diagonal = Math.sqrt(lngSpan * lngSpan + latSpan * latSpan);
 
-    if (diagonal < 5) return 0.45;
+    // More aggressive zoom for tiny countries
+    if (diagonal < 1.5) return 0.2;
+    if (diagonal < 3) return 0.28;
+    if (diagonal < 5) return 0.38;
     if (diagonal < 15) return 0.7;
     if (diagonal < 30) return 1.0;
     return 1.35;
