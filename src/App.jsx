@@ -25,6 +25,7 @@ export default function App() {
   const [message, setMessage] = useState('');
   const [roundsPlayed, setRoundsPlayed] = useState(0);
   const [showHint, setShowHint] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
 
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -42,17 +43,13 @@ export default function App() {
 
   const startSpin = useCallback(() => {
     const country = pickRandomCountry();
-    setTargetCountry(null); // reset first so useEffect re-fires
+
+    setTargetCountry(country);   // set immediately so app + globe use same country
     setGuess('');
     setLiveTranscript('');
     setShowHint(false);
     setMessage('');
     setGameState(GAME_STATES.SPINNING);
-
-    // Small delay then assign target so globe gets it after spin starts
-    setTimeout(() => {
-      setTargetCountry(country);
-    }, 1800);
   }, [pickRandomCountry]);
 
   const handleLanded = useCallback(() => {
@@ -132,13 +129,14 @@ export default function App() {
   const isDone = [GAME_STATES.CORRECT, GAME_STATES.WRONG, GAME_STATES.REVEALED].includes(gameState);
 
   return (
-    <div className="app">
+    <div className={`app ${lightMode ? 'light-mode' : ''}`}>
       {/* Globe fills the background */}
       <div className="globe-bg">
         <GlobeComponent
           isSpinning={isSpinning}
-          targetCountry= {targetCountry}
+          targetCountry={targetCountry}
           onLanded={handleLanded}
+          lightMode={lightMode}
         />
       </div>
 
@@ -175,6 +173,13 @@ export default function App() {
             </>
           )}
         </div>
+        <button 
+          className="btn-theme-toggle" 
+          onClick={() => setLightMode(!lightMode)}
+          title={lightMode ? 'Dark mode' : 'Light mode'}
+        >
+          {lightMode ? '🌙' : '☀️'}
+        </button>
       </header>
 
       {/* Main UI Panel */}
