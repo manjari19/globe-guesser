@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import Globe from 'react-globe.gl';
 
 // ─── GeoJSON source ────────────────────────────────────────────────────────
 const GEOJSON_URL =
   'https://raw.githubusercontent.com/vasturiano/react-globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson';
 
-const HIGHLIGHT_COLOR = 'rgba(0, 255, 200, 0.75)';
-const HIGHLIGHT_BORDER = 'rgba(0, 255, 200, 1.0)';
+const HIGHLIGHT_COLOR = 'rgba(0, 255, 150, 1.0)';
+const HIGHLIGHT_BORDER = 'rgba(100, 255, 200, 1.0)';
 
-export default function GlobeComponent({ isSpinning, targetCountry, onLanded, lightMode = false }) {
+function GlobeComponent({ isSpinning, targetCountry, onLanded, lightMode = false }, forwardedRef) {
   const globeRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -117,12 +117,12 @@ export default function GlobeComponent({ isSpinning, targetCountry, onLanded, li
     const diagonal = Math.sqrt(lngSpan * lngSpan + latSpan * latSpan);
 
     // More aggressive zoom for tiny countries
-    if (diagonal < 1.5) return 0.2;
-    if (diagonal < 3) return 0.28;
-    if (diagonal < 5) return 0.38;
-    if (diagonal < 15) return 0.7;
-    if (diagonal < 30) return 1.0;
-    return 1.35;
+    if (diagonal < 1.5) return 0.12;
+    if (diagonal < 3) return 0.18;
+    if (diagonal < 5) return 0.28;
+    if (diagonal < 15) return 0.6;
+    if (diagonal < 30) return 0.95;
+    return 1.3;
   }, []);
 
   const handleGlobeReady = useCallback(() => {
@@ -141,12 +141,24 @@ export default function GlobeComponent({ isSpinning, targetCountry, onLanded, li
     controls.zoomSpeed = 0.9;
     controls.rotateSpeed = 0.7;
     controls.panSpeed = 0.8;
-    controls.minDistance = 120;
-    controls.maxDistance = 600;
+    controls.minDistance = 100;
+    controls.maxDistance = 800;
 
     globe.pointOfView({ lat: 0, lng: 20, altitude: 2.0 }, 0);
     setGlobeReady(true);
   }, []);
+
+  useImperativeHandle(forwardedRef, () => ({
+    recenter: () => {
+      if (globeRef.current && targetCountry) {
+        const altitude = getCountrySizeAltitude(highlightFeature);
+        globeRef.current.pointOfView(
+          { lat: targetCountry.lat, lng: targetCountry.lng, altitude },
+          1200
+        );
+      }
+    },
+  }), [targetCountry, highlightFeature, getCountrySizeAltitude]);
 
   useEffect(() => {
     if (!globeReady) return;
@@ -238,20 +250,36 @@ export default function GlobeComponent({ isSpinning, targetCountry, onLanded, li
     }
 
     const name = targetCountry.name.trim().toLowerCase();
-
+    
+    // Improved matching with better accuracy
     const match = countries.features.find(f => {
+      if (!f?.properties) return false;
       const p = f.properties;
 
+      // Collect all possible name fields
       const candidates = [
         p.ADMIN,
+        p.admin,
         p.NAME,
+        p.name,
         p.NAME_LONG,
+        p.name_long,
         p.FORMAL_EN,
-        p.SOVEREIGNT
+        p.SOVEREIGNT,
+        p.sovereignt,
+        p.NAME_EN,
+        p.name_en
       ]
         .filter(Boolean)
-        .map(n => n.toLowerCase());
+        .map(n => {
+          if (typeof n !== 'string') return '';
+          return n.trim().toLowerCase();
+        });
 
+      // Exact match first (best match)
+      if (candidates.includes(name)) return true;
+      
+      // Then try substring matching
       return candidates.some(n =>
         n === name ||
         n.includes(name) ||
@@ -259,9 +287,13 @@ export default function GlobeComponent({ isSpinning, targetCountry, onLanded, li
       );
     });
 
-    // debugging
-    console.log("Target:", targetCountry.name);
-    console.log("Matched:", match?.properties);
+    console.log("Target:", targetCountry.name, "Candidates found:", countries.features.length);
+    if (match) {
+      console.log("Matched feature:", match.properties.ADMIN || match.properties.NAME || match.properties.name);
+    } else {
+      console.log("No match found - checking first few entries...");
+      console.log(countries.features.slice(0, 2).map(f => ({ admin: f.properties.ADMIN, name: f.properties.NAME })));
+    }
 
     setHighlight(match ?? null);
 
@@ -296,7 +328,7 @@ export default function GlobeComponent({ isSpinning, targetCountry, onLanded, li
         polygonCapColor={() => HIGHLIGHT_COLOR}
         polygonSideColor={() => 'rgba(0,0,0,0)'}
         polygonStrokeColor={() => HIGHLIGHT_BORDER}
-        polygonAltitude={0.01}
+        polygonAltitude={0.08}
         onGlobeReady={handleGlobeReady}
         animateIn={false}
         rendererConfig={{ antialias: true, alpha: true }}
@@ -304,3 +336,5 @@ export default function GlobeComponent({ isSpinning, targetCountry, onLanded, li
     </div>
   );
 }
+
+export default forwardRef(GlobeComponent);

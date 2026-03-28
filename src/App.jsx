@@ -29,6 +29,7 @@ export default function App() {
 
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
+  const globeRef = useRef(null);
 
   // Check speech recognition support
   useEffect(() => {
@@ -133,6 +134,7 @@ export default function App() {
       {/* Globe fills the background */}
       <div className="globe-bg">
         <GlobeComponent
+          ref={globeRef}
           isSpinning={isSpinning}
           targetCountry={targetCountry}
           onLanded={handleLanded}
@@ -249,6 +251,13 @@ export default function App() {
                   )}
                 </button>
               )}
+              <button 
+                className="btn-ghost" 
+                onClick={() => globeRef.current?.recenter()}
+                title="Recenter on the country"
+              >
+                🎯 Recenter
+              </button>
               <button className="btn-ghost" onClick={reveal}>
                 Give up
               </button>
